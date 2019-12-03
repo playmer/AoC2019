@@ -63,7 +63,7 @@ fn main()
         .collect::<Vec<i32>>();
 
     {
-        let mut int_codes = int_codes;
+        let mut int_codes = int_codes.clone();
         // Gotta restore the gravity assist program to the "1202 program alarm" state it had just before the last computer caught fire.
         int_codes[1] = 12;
         int_codes[2] = 2;
@@ -76,24 +76,42 @@ fn main()
 
     
     {
-        let mut int_codes_final = int_codes;
+        let mut int_codes_final = int_codes.clone();
+        let mut final_noun = 0;
+        let mut final_verb = 0;
 
-        for noun in 0 .. 100
+        'outer: for noun in 0 .. 100
         {
             for verb in 0 .. 100
             {
-                let mut int_codes_attempt = int_codes;
+                let mut int_codes_attempt = int_codes.clone();
 
-                int_codes[1] = 12;
-                int_codes[2] = 2;
+                int_codes_attempt[1] = noun;
+                int_codes_attempt[2] = verb;
             
-                let result = run_int_code_computer(& mut int_codes);
+                let result = run_int_code_computer(& mut int_codes_attempt);
 
-                if ()
+                if result == 19690720
+                {
+                    int_codes_final = int_codes_attempt.clone();
+                    final_noun = noun;
+                    final_verb = verb;
+                    break 'outer;
+                }
             }
         }
+
+        let result = int_codes_final[0];
         
-        println!("Part 1: Result: {}", result);
-        println!("Part 1: Full int codes: {:?}", int_codes_final);   
+
+        if result != 19690720
+        {
+            panic!("Got the wrong result!");
+        }
+
+        println!("Part 2: Result: {}", 100 * final_noun + final_verb);
+        println!("Part 2: Noun: {}", final_noun);
+        println!("Part 2: Verb: {}", final_verb);
+        println!("Part 2: Full int codes: {:?}", int_codes_final);   
     }
 }

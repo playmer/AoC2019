@@ -10,41 +10,41 @@ enum Opcode {
 
 fn addition(index : usize, int_codes :  & mut Vec<i32>)
 {
-    let left_address = int_codes[index + 1] as usize;
-    let right_address = int_codes[index + 2] as usize;
+    let param_1_address = int_codes[index + 1] as usize;
+    let param_2_address = int_codes[index + 2] as usize;
     let result_address = int_codes[index + 3] as usize;
     
-    int_codes[result_address] = int_codes[left_address] + int_codes[right_address];
+    int_codes[result_address] = int_codes[param_1_address] + int_codes[param_2_address];
 }
 
 
 fn multiplication(index : usize, int_codes :  & mut Vec<i32>)
 {
-    let left_address = int_codes[index + 1] as usize;
-    let right_address = int_codes[index + 2] as usize;
+    let param_1_address = int_codes[index + 1] as usize;
+    let param_2_address = int_codes[index + 2] as usize;
     let result_address = int_codes[index + 3] as usize;
 
-    int_codes[result_address] = int_codes[left_address] * int_codes[right_address];
+    int_codes[result_address] = int_codes[param_1_address] * int_codes[param_2_address];
 }
 
 fn run_int_code_computer(int_codes :  & mut Vec<i32>) -> i32
 {
-    let mut index = 0;
+    let mut instruction_pointer = 0;
 
     loop
     {
-        let opcode = FromPrimitive::from_i32(int_codes[index]);
+        let opcode = FromPrimitive::from_i32(int_codes[instruction_pointer]);
         match opcode
         {
             Some(Opcode::Addition) => 
             {
-                addition(index, int_codes);
-                index += 4;
+                addition(instruction_pointer, int_codes);
+                instruction_pointer += 4;
             }
             Some(Opcode::Multiplication) => 
             {
-                multiplication(index, int_codes);
-                index += 4;
+                multiplication(instruction_pointer, int_codes);
+                instruction_pointer += 4;
             }
             Some(Opcode::End) => break,
             None => panic!("Unknown error!")

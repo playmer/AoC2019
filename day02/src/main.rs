@@ -8,28 +8,34 @@ enum Opcode {
     End = 99
 }
 
-fn addition(index : usize, int_codes :  & mut Vec<i32>)
+fn addition(index : usize, int_codes :  & mut Vec<i32>, asm_dump :  & mut Vec<String>)
 {
-    let param_1_address = int_codes[index + 1] as usize;
-    let param_2_address = int_codes[index + 2] as usize;
+    let arg_1_address = int_codes[index + 1] as usize;
+    let arg_2_address = int_codes[index + 2] as usize;
     let result_address = int_codes[index + 3] as usize;
     
-    int_codes[result_address] = int_codes[param_1_address] + int_codes[param_2_address];
+    int_codes[result_address] = int_codes[arg_1_address] + int_codes[arg_2_address];
+
+    asm_dump.push(format!("add: {}, {}, {}", arg_1_address, arg_2_address, result_address));
 }
 
 
-fn multiplication(index : usize, int_codes :  & mut Vec<i32>)
+fn multiplication(index : usize, int_codes :  & mut Vec<i32>, asm_dump :  & mut Vec<String>)
 {
-    let param_1_address = int_codes[index + 1] as usize;
-    let param_2_address = int_codes[index + 2] as usize;
+    let arg_1_address = int_codes[index + 1] as usize;
+    let arg_2_address = int_codes[index + 2] as usize;
     let result_address = int_codes[index + 3] as usize;
 
-    int_codes[result_address] = int_codes[param_1_address] * int_codes[param_2_address];
+    int_codes[result_address] = int_codes[arg_1_address] * int_codes[arg_2_address];
+
+    asm_dump.push(format!("multiply: {}, {}, {}", arg_1_address, arg_2_address, result_address));
 }
 
 fn run_int_code_computer(int_codes :  & mut Vec<i32>) -> i32
 {
     let mut instruction_pointer = 0;
+
+    let mut asm_dump = Vec::<String>::new();
 
     loop
     {
@@ -38,19 +44,25 @@ fn run_int_code_computer(int_codes :  & mut Vec<i32>) -> i32
         {
             Some(Opcode::Addition) => 
             {
-                addition(instruction_pointer, int_codes);
+                addition(instruction_pointer, int_codes, & mut asm_dump);
                 instruction_pointer += 4;
             }
             Some(Opcode::Multiplication) => 
             {
-                multiplication(instruction_pointer, int_codes);
+                multiplication(instruction_pointer, int_codes, & mut asm_dump);
                 instruction_pointer += 4;
             }
-            Some(Opcode::End) => break,
+            Some(Opcode::End) => 
+            {
+                asm_dump.push("return".to_string());
+                break;
+            }
             None => panic!("Unknown error!")
         }
     }
 
+    
+    println!("asm_dump:\n {}", asm_dump.join("\n"));
     return int_codes[0];
 }
 
@@ -62,6 +74,7 @@ fn main()
         .map(|l| l.parse::<i32>().unwrap())
         .collect::<Vec<i32>>();
 
+    // Part 1
     {
         let mut int_codes = int_codes.clone();
         // Gotta restore the gravity assist program to the "1202 program alarm" state it had just before the last computer caught fire.
@@ -74,44 +87,44 @@ fn main()
         println!("Part 1: Full int codes: {:?}", int_codes);   
     }
 
-    
-    {
-        let mut int_codes_final = int_codes.clone();
-        let mut final_noun = 0;
-        let mut final_verb = 0;
+    // // Part 2
+    // {
+    //     let mut int_codes_final = int_codes.clone();
+    //     let mut final_noun = 0;
+    //     let mut final_verb = 0;
 
-        'outer: for noun in 0 .. 100
-        {
-            for verb in 0 .. 100
-            {
-                let mut int_codes_attempt = int_codes.clone();
+    //     'outer: for noun in 0 .. 100
+    //     {
+    //         for verb in 0 .. 100
+    //         {
+    //             let mut int_codes_attempt = int_codes.clone();
 
-                int_codes_attempt[1] = noun;
-                int_codes_attempt[2] = verb;
+    //             int_codes_attempt[1] = noun;
+    //             int_codes_attempt[2] = verb;
             
-                let result = run_int_code_computer(& mut int_codes_attempt);
+    //             let result = run_int_code_computer(& mut int_codes_attempt);
 
-                if result == 19690720
-                {
-                    int_codes_final = int_codes_attempt.clone();
-                    final_noun = noun;
-                    final_verb = verb;
-                    break 'outer;
-                }
-            }
-        }
+    //             if result == 19690720
+    //             {
+    //                 int_codes_final = int_codes_attempt.clone();
+    //                 final_noun = noun;
+    //                 final_verb = verb;
+    //                 break 'outer;
+    //             }
+    //         }
+    //     }
 
-        let result = int_codes_final[0];
+    //     let result = int_codes_final[0];
         
 
-        if result != 19690720
-        {
-            panic!("Got the wrong result!");
-        }
+    //     if result != 19690720
+    //     {
+    //         panic!("Got the wrong result!");
+    //     }
 
-        println!("Part 2: Result: {}", 100 * final_noun + final_verb);
-        println!("Part 2: Noun: {}", final_noun);
-        println!("Part 2: Verb: {}", final_verb);
-        println!("Part 2: Full int codes: {:?}", int_codes_final);   
-    }
+    //     println!("Part 2: Result: {}", 100 * final_noun + final_verb);
+    //     println!("Part 2: Noun: {}", final_noun);
+    //     println!("Part 2: Verb: {}", final_verb);
+    //     println!("Part 2: Full int codes: {:?}", int_codes_final);   
+    // }
 }

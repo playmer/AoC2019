@@ -3,6 +3,7 @@ pub mod int_code_computer
     use num_derive::FromPrimitive;    
     use num_traits::FromPrimitive;
 
+
     
     #[derive(Clone, Copy, FromPrimitive)]
     enum Opcode {
@@ -10,6 +11,10 @@ pub mod int_code_computer
         Multiplication = 2,
         Input = 3,
         Output = 4,
+        JumpIfTrue = 5,
+        JumpIfFalse = 6,
+        LessThan = 7,
+        Equals = 8,
         End = 99
     }
 
@@ -19,156 +24,172 @@ pub mod int_code_computer
         Immediate = 1
     }
     
-    fn addition(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : Vec<ParameterMode>, asm_dump :  & mut Vec<String>) -> usize
+    fn get_args(instruction_pointer : usize, int_codes : & Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & mut Vec<i32>)
     {
-        assert!(parameter_modes[2] == ParameterMode::Position, "Write arguement should never be immediate");
-        let arg_1 = if parameter_modes[0] == ParameterMode::Position 
-        {
-            int_codes[int_codes[instruction_pointer + 1] as usize]
-        }
-        else
-        {
-            int_codes[instruction_pointer + 1]
-        };
+        arguments.clear();
 
-        let arg_2 = if parameter_modes[1] == ParameterMode::Position 
+        for (i, parameter_mode) in parameter_modes.iter().enumerate()
         {
-            int_codes[int_codes[instruction_pointer + 2] as usize]
+            match parameter_mode
+            {
+                ParameterMode::Position => arguments.push(int_codes[int_codes[instruction_pointer + i + 1] as usize]),
+                ParameterMode::Immediate => arguments.push(int_codes[instruction_pointer + i + 1])
+            }
         }
-        else
-        {
-            int_codes[instruction_pointer + 2]
-        };
-
-        let result_address = int_codes[instruction_pointer + 3] as usize;
-        
-        int_codes[result_address] = arg_1 + arg_2;
+    }
     
-        asm_dump.push(format!("add: {}, {}, {}", arg_1, arg_2, result_address));
+    fn addition(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    {
+        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
+        
+        int_codes[arguments[2] as usize] = arguments[0] + arguments[1];
+    
         return instruction_pointer + 4;
     }
     
     
-    fn multiplication(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : Vec<ParameterMode>, asm_dump :  & mut Vec<String>) -> usize
+    fn multiplication(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
     {
-        assert!(parameter_modes[2] == ParameterMode::Position, "Write arguement should never be immediate");
-        let arg_1 = if parameter_modes[0] == ParameterMode::Position 
-        {
-            int_codes[int_codes[instruction_pointer + 1] as usize]
-        }
-        else
-        {
-            int_codes[instruction_pointer + 1]
-        };
-
-        let arg_2 = if parameter_modes[1] == ParameterMode::Position 
-        {
-            int_codes[int_codes[instruction_pointer + 2] as usize]
-        }
-        else
-        {
-            int_codes[instruction_pointer + 2]
-        };
-
-        let result_address = int_codes[instruction_pointer + 3] as usize;
+        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
         
-        int_codes[result_address] = arg_1 * arg_2;
+        int_codes[arguments[2] as usize] = arguments[0] * arguments[1];
     
-        asm_dump.push(format!("multiplication: {}, {}, {}", arg_1, arg_2, result_address));
         return instruction_pointer + 4;
     }
     
-    fn input(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : Vec<ParameterMode>, asm_dump :  & mut Vec<String>) -> usize
+    fn input(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
     {
-        use std::io::{Read};
-
-        assert!(parameter_modes[0] == ParameterMode::Position, "Write arguement should never be immediate");
-        let result_address = int_codes[instruction_pointer + 1] as usize;
+        assert!(parameter_modes[0] == ParameterMode::Position, "Write argument should never be immediate");
 
         let mut buffer = String::new();
         std::io::stdin().read_line(&mut buffer).expect("Could not read i32 from stdin!");
 
         let input = buffer.trim().parse::<i32>().unwrap();
     
-        int_codes[result_address] = input;
+        int_codes[arguments[2] as usize] = input;
     
-        asm_dump.push(format!("input: {}", result_address));
         return instruction_pointer + 2;
     }
     
-    fn output(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : Vec<ParameterMode>, asm_dump :  & mut Vec<String>) -> usize
+    fn output(instruction_pointer : usize, arguments : & Vec<i32>) -> usize
     {
-        let arg_1 = if parameter_modes[0] == ParameterMode::Position 
+        println!("{}", arguments[0]);
+    
+        return instruction_pointer + 2;
+    }
+
+    fn jump_if_true(instruction_pointer : usize, arguments : & Vec<i32>) -> usize
+    {
+        if arguments[0] != 0
         {
-            int_codes[int_codes[instruction_pointer + 1] as usize]
+            return arguments[1] as usize;
         }
-        else
-        {
-            int_codes[instruction_pointer + 1]
-        };
-
-        println!("{}", arg_1);
     
-        asm_dump.push(format!("output: {}", arg_1));
         return instruction_pointer + 2;
     }
 
-    fn get_default_parameter_modes(opcode : Opcode) -> Vec<ParameterMode>
+    fn jump_if_false(instruction_pointer : usize, arguments : & Vec<i32>) -> usize
     {
+        if arguments[0] == 0
+        {
+            return arguments[1] as usize;
+        }
+    
+        return instruction_pointer + 2;
+    }
+    
+    fn less_than(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    {
+        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
+        
+        int_codes[arguments[2] as usize] = if arguments[0] < arguments[1] { 1 } else { 0 };
+    
+        return instruction_pointer + 4;
+    }
+    
+    fn equals(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    {
+        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
+
+        let result_address = int_codes[instruction_pointer + 3] as usize;
+        
+        int_codes[result_address] = if arguments[0] == arguments[1] { 1 } else { 0 };
+    
+        return instruction_pointer + 4;
+    }
+
+    fn fill(number : usize, parameter_modes : & mut Vec<ParameterMode>)
+    {
+        for _x in 0..number
+        {
+            parameter_modes.push(ParameterMode::Position);
+        }
+    }
+
+    fn get_default_parameter_modes(opcode : Opcode, parameter_modes : & mut Vec<ParameterMode>)
+    {
+        parameter_modes.clear();
+
         match opcode
         {
-            Opcode::Addition => 
-            {
-                return vec![ParameterMode::Position; 3];
-            }
-            Opcode::Multiplication => 
-            {
-                return vec![ParameterMode::Position; 3];
-            }
-            Opcode::Input => 
-            {
-                return vec![ParameterMode::Position; 1];
-            }
-            Opcode::Output => 
-            {
-                return vec![ParameterMode::Position; 1];
-            }
-            Opcode::End => 
-            {
-                return Vec::new();
-            }
+            Opcode::Addition => fill(3, parameter_modes),
+            Opcode::Multiplication => fill(3, parameter_modes),
+            Opcode::Input => fill(1, parameter_modes),
+            Opcode::Output => fill(1, parameter_modes),
+            Opcode::JumpIfTrue => fill(2, parameter_modes),
+            Opcode::JumpIfFalse => fill(2, parameter_modes),
+            Opcode::LessThan => fill(3, parameter_modes),
+            Opcode::Equals => fill(3, parameter_modes),
+            Opcode::End => return
         }
     }
 
-    fn get_opcode_and_parameter_modes(unparsed_opcode_given : i32) -> (Opcode, Vec<ParameterMode>)
+    fn get_opcode_and_parameter_modes(unparsed_opcode_given : i32, parameter_modes : & mut Vec<ParameterMode>) -> Opcode
     {
         let unparsed_opcode: String = unparsed_opcode_given.to_string();
 
         if unparsed_opcode.len() > 2
         {
-            let (parameter_modes, opcode) = unparsed_opcode.split_at(unparsed_opcode.len() - 2);
+            let (parameter_modes_str, opcode) = unparsed_opcode.split_at(unparsed_opcode.len() - 2);
 
             let opcode : Opcode = FromPrimitive::from_i32(opcode.parse::<i32>().unwrap()).unwrap();
 
-            let mut default_parameter_modes = get_default_parameter_modes(opcode);
+            get_default_parameter_modes(opcode, parameter_modes);
 
-            for (i, parameter_mode) in parameter_modes.chars().rev().enumerate()
+            for (i, parameter_mode) in parameter_modes_str.chars().rev().enumerate()
             {
                 match parameter_mode
                 {
-                    '0' => default_parameter_modes[i] = ParameterMode::Position,
-                    '1' => default_parameter_modes[i] = ParameterMode::Immediate,
+                    '0' => parameter_modes[i] = ParameterMode::Position,
+                    '1' => parameter_modes[i] = ParameterMode::Immediate,
                     _ => panic!("Got a bad parameter mode! It was '{}'", parameter_mode)
                 }
 
             }
 
-            return (opcode, default_parameter_modes);
+            return opcode;
         }
 
         let opcode = FromPrimitive::from_i32(unparsed_opcode_given).unwrap();
+        get_default_parameter_modes(opcode, parameter_modes);
 
-        return (opcode, get_default_parameter_modes(opcode));
+        return opcode;
+    }
+
+    fn opcode_to_string(opcode : &Opcode) -> &'static str
+    {
+        match opcode
+        {
+            Opcode::Addition => return "Opcode::Addition",
+            Opcode::Multiplication => return "Opcode::Multiplication",
+            Opcode::Input => return "Opcode::Input",
+            Opcode::Output => return "Opcode::Output",
+            Opcode::JumpIfTrue => return "Opcode::JumpIfTrue",
+            Opcode::JumpIfFalse => return "Opcode::JumpIfFalse",
+            Opcode::LessThan => return "Opcode::LessThan",
+            Opcode::Equals => return "Opcode::Equals",
+            Opcode::End => return "Opcode::End"
+        }
     }
 
     pub fn run(int_codes :  & mut Vec<i32>, should_print_asm : bool) -> i32
@@ -176,28 +197,53 @@ pub mod int_code_computer
         let mut instruction_pointer = 0;
 
         let mut asm_dump = Vec::<String>::new();
+        let mut arguments = Vec::<i32>::new();
+        let mut parameter_modes = Vec::<ParameterMode>::new();
 
         loop
         {
-            let (opcode, parameter_modes) = get_opcode_and_parameter_modes(int_codes[instruction_pointer]);
+            let opcode = get_opcode_and_parameter_modes(int_codes[instruction_pointer], & mut parameter_modes);
+
+            get_args(instruction_pointer, int_codes, &parameter_modes, & mut arguments);
+            
+            if should_print_asm
+            {
+                asm_dump.push(format!("{}: {:?}", opcode_to_string(&opcode), arguments));
+            }
 
             match opcode
             {
                 Opcode::Addition => 
                 {
-                    instruction_pointer = addition(instruction_pointer, int_codes, parameter_modes, & mut asm_dump);
+                    instruction_pointer = addition(instruction_pointer, int_codes, &parameter_modes, &arguments);
                 }
                 Opcode::Multiplication => 
                 {
-                    instruction_pointer = multiplication(instruction_pointer, int_codes, parameter_modes, & mut asm_dump);
+                    instruction_pointer = multiplication(instruction_pointer, int_codes, &parameter_modes, &arguments);
                 }
                 Opcode::Input => 
                 {
-                    instruction_pointer = input(instruction_pointer, int_codes, parameter_modes, & mut asm_dump);
+                    instruction_pointer = input(instruction_pointer, int_codes, &parameter_modes, &arguments);
                 }
                 Opcode::Output => 
                 {
-                    instruction_pointer = output(instruction_pointer, int_codes, parameter_modes, & mut asm_dump);
+                    instruction_pointer = output(instruction_pointer, &arguments);
+                }
+                Opcode::JumpIfTrue => 
+                {
+                    instruction_pointer = jump_if_true(instruction_pointer, &arguments);
+                }
+                Opcode::JumpIfFalse => 
+                {
+                    instruction_pointer = jump_if_false(instruction_pointer, &arguments);
+                }
+                Opcode::LessThan => 
+                {
+                    instruction_pointer = less_than(instruction_pointer, int_codes, &parameter_modes, &arguments);
+                }
+                Opcode::Equals => 
+                {
+                    instruction_pointer = equals(instruction_pointer, int_codes, &parameter_modes, &arguments);
                 }
                 Opcode::End => 
                 {

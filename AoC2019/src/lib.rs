@@ -79,7 +79,7 @@ pub mod int_code_computer
             return arguments[1] as usize;
         }
     
-        return instruction_pointer + 2;
+        return instruction_pointer + 3;
     }
 
     fn jump_if_false(instruction_pointer : usize, arguments : & Vec<i32>) -> usize
@@ -89,7 +89,7 @@ pub mod int_code_computer
             return arguments[1] as usize;
         }
     
-        return instruction_pointer + 2;
+        return instruction_pointer + 3;
     }
     
     fn less_than(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
@@ -101,9 +101,7 @@ pub mod int_code_computer
     
     fn equals(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
     {
-        let result_address = int_codes[instruction_pointer + 3] as usize;
-        
-        int_codes[result_address] = if arguments[0] == arguments[1] { 1 } else { 0 };
+        int_codes[arguments[2] as usize] = if arguments[0] == arguments[1] { 1 } else { 0 };
     
         return instruction_pointer + 4;
     }

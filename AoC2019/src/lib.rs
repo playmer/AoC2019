@@ -38,35 +38,29 @@ pub mod int_code_computer
         }
     }
     
-    fn addition(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    fn addition(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
     {
-        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
-        
         int_codes[arguments[2] as usize] = arguments[0] + arguments[1];
     
         return instruction_pointer + 4;
     }
     
     
-    fn multiplication(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    fn multiplication(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
     {
-        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
-        
         int_codes[arguments[2] as usize] = arguments[0] * arguments[1];
     
         return instruction_pointer + 4;
     }
     
-    fn input(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    fn input(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
     {
-        assert!(parameter_modes[0] == ParameterMode::Position, "Write argument should never be immediate");
-
         let mut buffer = String::new();
         std::io::stdin().read_line(&mut buffer).expect("Could not read i32 from stdin!");
 
         let input = buffer.trim().parse::<i32>().unwrap();
     
-        int_codes[arguments[2] as usize] = input;
+        int_codes[arguments[0] as usize] = input;
     
         return instruction_pointer + 2;
     }
@@ -98,19 +92,15 @@ pub mod int_code_computer
         return instruction_pointer + 2;
     }
     
-    fn less_than(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    fn less_than(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
     {
-        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
-        
         int_codes[arguments[2] as usize] = if arguments[0] < arguments[1] { 1 } else { 0 };
     
         return instruction_pointer + 4;
     }
     
-    fn equals(instruction_pointer : usize, int_codes :  & mut Vec<i32>, parameter_modes : & Vec<ParameterMode>, arguments : & Vec<i32>) -> usize
+    fn equals(instruction_pointer : usize, int_codes :  & mut Vec<i32>, arguments : & Vec<i32>) -> usize
     {
-        assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
-
         let result_address = int_codes[instruction_pointer + 3] as usize;
         
         int_codes[result_address] = if arguments[0] == arguments[1] { 1 } else { 0 };
@@ -143,6 +133,30 @@ pub mod int_code_computer
             Opcode::End => return
         }
     }
+    
+    
+    fn opcode_parameter_mode_check(opcode : &Opcode, parameter_modes : & mut Vec<ParameterMode>)
+    {
+        match opcode
+        {
+            Opcode::Addition |  Opcode::Multiplication | Opcode::LessThan |  Opcode::Equals =>
+            {
+                assert!(parameter_modes[2] == ParameterMode::Position, "Write argument should never be immediate");
+                parameter_modes[2] = ParameterMode::Immediate;
+                return;
+            },
+            Opcode::Input =>
+            {
+                assert!(parameter_modes[0] == ParameterMode::Position, "Write argument should never be immediate");
+                parameter_modes[0] = ParameterMode::Immediate;
+                return;
+            },
+            Opcode::Output | Opcode::JumpIfTrue  | Opcode::JumpIfFalse | Opcode::End =>
+            {
+                return;
+            }
+        }
+    }
 
     fn get_opcode_and_parameter_modes(unparsed_opcode_given : i32, parameter_modes : & mut Vec<ParameterMode>) -> Opcode
     {
@@ -164,14 +178,15 @@ pub mod int_code_computer
                     '1' => parameter_modes[i] = ParameterMode::Immediate,
                     _ => panic!("Got a bad parameter mode! It was '{}'", parameter_mode)
                 }
-
             }
 
+            opcode_parameter_mode_check(&opcode, parameter_modes);
             return opcode;
         }
 
         let opcode = FromPrimitive::from_i32(unparsed_opcode_given).unwrap();
         get_default_parameter_modes(opcode, parameter_modes);
+        opcode_parameter_mode_check(&opcode, parameter_modes);
 
         return opcode;
     }
@@ -215,15 +230,15 @@ pub mod int_code_computer
             {
                 Opcode::Addition => 
                 {
-                    instruction_pointer = addition(instruction_pointer, int_codes, &parameter_modes, &arguments);
+                    instruction_pointer = addition(instruction_pointer, int_codes, &arguments);
                 }
                 Opcode::Multiplication => 
                 {
-                    instruction_pointer = multiplication(instruction_pointer, int_codes, &parameter_modes, &arguments);
+                    instruction_pointer = multiplication(instruction_pointer, int_codes, &arguments);
                 }
                 Opcode::Input => 
                 {
-                    instruction_pointer = input(instruction_pointer, int_codes, &parameter_modes, &arguments);
+                    instruction_pointer = input(instruction_pointer, int_codes, &arguments);
                 }
                 Opcode::Output => 
                 {
@@ -239,11 +254,11 @@ pub mod int_code_computer
                 }
                 Opcode::LessThan => 
                 {
-                    instruction_pointer = less_than(instruction_pointer, int_codes, &parameter_modes, &arguments);
+                    instruction_pointer = less_than(instruction_pointer, int_codes, &arguments);
                 }
                 Opcode::Equals => 
                 {
-                    instruction_pointer = equals(instruction_pointer, int_codes, &parameter_modes, &arguments);
+                    instruction_pointer = equals(instruction_pointer, int_codes, &arguments);
                 }
                 Opcode::End => 
                 {

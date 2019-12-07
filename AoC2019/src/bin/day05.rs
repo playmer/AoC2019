@@ -12,7 +12,7 @@ fn main()
     {
         let mut int_codes = int_codes.clone();
     
-        let result = int_code_computer::run(& mut int_codes, false);
+        let result = int_code_computer::run(& mut int_codes, true);
     
         println!("Part 1: Result: {}", result);
         //println!("Part 1: Full int codes: {:?}", int_codes);

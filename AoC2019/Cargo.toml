@@ -1,0 +1,14 @@
+[package]
+name = "AoC2019"
+version = "0.1.0"
+authors = ["Joshua T. Fisher <playmer@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "aoc_helpers"
+path = "src/lib.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num-traits = "0.2"
+num-derive = "0.2"
